@@ -6,9 +6,16 @@ import requests
 app = FastAPI()
 
 def get_video_info(url):
-    ydl_opts = {"quiet": True}
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        return ydl.extract_info(url, download=False)
+    try:
+        ydl_opts = {
+            "quiet": True,
+            "skip_download": True
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        return info
+    except Exception as e:
+        return {"error": str(e)}
 
 def get_video_id(url):
     if "youtu.be" in url:
@@ -20,11 +27,14 @@ def get_video_id(url):
 def video(url: str = Query(...)):
     info = get_video_info(url)
 
-    return JSONResponse({
+    if "error" in info:
+        return JSONResponse({"error": info["error"]}, status_code=500)
+
+    return {
         "title": info.get("title"),
         "description": info.get("description"),
         "tags": info.get("tags")
-    })
+    }
 
 @app.get("/thumbnail")
 def thumbnail(url: str = Query(...)):
